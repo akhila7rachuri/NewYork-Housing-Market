@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NewYork Housing Market</title>
+    <style>
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-image: url('/static/image.jpeg');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+            filter: blur(5px);
+            -webkit-filter: blur(5px);
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+            color: black; 
+            font-family: Arial, sans-serif; 
+            margin-top: 10px;
+        }
+
+        h1 {
+            text-align: center;
+            color: black;
+        }
+
+        form {
+            width: 80%;
+            max-width: 400px;
+            background-color: rgba(255, 255, 255, 0.8); 
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        label, select, button {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        #results {
+            position: fixed;
+            top: 90px; /* Adjust as needed for space at the top */
+            right: 30px;
+            max-height: calc(100vh - 100px); /* Adjust as needed for space at the top and bottom */
+            overflow-y: auto;
+            padding: 10px;
+            border-radius: 20px;
+            z-index: 1;
+            color: #333;
+            font-size: 14px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+
+        button[type="submit"] {
+            background-color: lightgreen; 
+            color: black; 
+            border: none; 
+            border-radius: 5px; 
+            padding: 10px 20px; 
+            cursor: pointer; 
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    <div class="content">
+        <h1>NewYork Housing Market</h1>
+        <h2>Search for Housing Brokers</h2>
+        <form id="searchForm">
+            <label for="state"></label>
+            <select id="state" name="state" required>
+                <option value="" disabled selected hidden>Select City</option>
+                <option value="Manhattan">Manhattan</option>
+                <option value="Staten Island">Staten Island</option>
+                <option value="Brooklyn">Brooklyn</option>
+                <option value="Belle Harbor">Belle Harbor</option>
+                <option value="Bronx">Bronx</option>
+                <option value="New York">New York</option>
+                <option value="East Flatbush">East Flatbush</option>
+                <option value="Malba">Malba</option>
+            </select>
+            <label for="house_type"></label>
+            <select id="house_type" name="house_type" required>
+                <option value="" disabled selected hidden>Select House Type</option>
+                <option value="Condo for sale">Condo for sale</option>
+                <option value="House for sale">House for sale</option>
+                <option value="Land for sale">Land for sale</option>
+                <option value="Multi-family home for sale">Multi-family home for sale</option>
+                <option value="Townhouse for sale">Townhouse for sale</option>
+            </select>
+            <label for="price_above" style="margin-bottom: 5px;">Price Above:</label>
+            <div style="margin-bottom: 10px;">
+                <span style="color: red; margin-right: 5px;">$</span>
+                <input type="number" id="price_above" name="price_above" required>
+            </div>
+            <label for="price_below" style="margin-bottom: 5px;">Price Below:</label>
+            <div>
+                <span style="color: red; margin-right: 5px;">$</span>
+                <input type="number" id="price_below" name="price_below" required>
+            </div>
+            <div style="margin-top: 10px;">
+                <button type="submit" style="display: inline-block;">Search</button>
+                <button type="reset" style="display: inline-block; margin-left: 10px;">Clear</button>
+            </div>                         
+        </form>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        document.getElementById('searchForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the form from submitting normally
+            
+            var state = document.getElementById('state').value;
+            var house_type = document.getElementById('house_type').value;
+            var priceAbove = document.getElementById('price_above').value;
+            var priceBelow = document.getElementById('price_below').value;
+            
+            if (parseInt(priceAbove) < 0 || parseInt(priceBelow) < 0) {
+                alert('Price cannot be negative!');
+                return;
+            }
+
+            fetch('/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({state: state, house_type: house_type, price_above: priceAbove, price_below: priceBelow}),
+            })
+            .then(response => response.json())
+            .then(data => {
+                var resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = ''; 
+                var previousTotalCountText = resultsDiv.parentElement.querySelector('.total-count-text');
+                if (previousTotalCountText) {
+                    previousTotalCountText.remove();
+                }
+
+                var totalCountText = document.createElement('p');
+                totalCountText.textContent = 'Total Records Found: ' + data.length;
+                totalCountText.classList.add('total-count-text');
+                        
+                var parentDiv = resultsDiv.parentElement;
+                parentDiv.insertBefore(totalCountText, resultsDiv);
+
+                if (data.length === 0) {
+                    resultsDiv.textContent = "--------------- No records found for your search. Please change your search criteria.---------------";
+                }
+                else
+                {
+                   
+                    var table = document.createElement('table');
+                    var thead = table.createTHead();
+                    var tbody = table.createTBody();
+
+                    var headerRow = thead.insertRow();
+                    var brokerHeader = headerRow.insertCell(0);
+                    brokerHeader.textContent = 'Broker';
+                    brokerHeader.style.paddingLeft = '20px';
+                    brokerHeader.style.textAlign = 'left'; 
+                    brokerHeader.style.color = 'orange'; 
+                    brokerHeader.style.fontWeight = 'bold';
+                    brokerHeader.style.fontSize = '20px';
+                    var priceHeader = headerRow.insertCell(1);
+                    priceHeader.textContent = '$:Price';
+                    priceHeader.style.textAlign = 'left'; 
+                    priceHeader.style.color = 'orange'; 
+                    priceHeader.style.fontWeight = 'bold';
+                    priceHeader.style.fontSize = '20px'; 
+
+                    data.forEach(function(item) {
+                        var row = tbody.insertRow();
+                        var brokerCell = row.insertCell(0);
+                        brokerCell.textContent = item.broker;
+                        var priceCell = row.insertCell(1);
+                        priceCell.textContent = item.price;
+                    });
+
+                    resultsDiv.appendChild(table);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    </script>
+</body>
+</html>
